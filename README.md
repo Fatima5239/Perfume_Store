@@ -1,59 +1,72 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Perfume Al Wissam
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A modern, fully-featured e-commerce store built with Laravel for selling premium perfumes and fragrances.
 
-## About Laravel
+## 🚀 Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Full Product Management**: Create, update, delete, and categorize perfumes (men's, women's, unisex).
+- **Advanced Shopping Experience**: Search filters, product views, related items, and detailed product pages.
+- **Real-time Admin Analytics**: Track visitor stats, popular searches, and product views with a dedicated dashboard.
+- **Secure Admin Panel**: Protected product management with authentication and authorization.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🛠️ Technology Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Backend**: Laravel 12.x[citation:2]
+- **Frontend**: Laravel Blade, Tailwind CSS
+- **Database**: MySQL (with migrations for products, brands, analytics, etc.)
+- **Authentication**: Laravel's built-in auth system
 
-## Learning Laravel
+## 📁 Key Project Components
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- **Models**: `Product`, `Brand`, `Fragrance`, `VisitorStat`, `SearchStat`, `ProductView`
+- **Controllers**: `HomeController`, `ShopController`, `AdminDashboardController`, `ProductController`
+- **Services**: `TrackingService` (for analytics)
+- **Migrations**: Database schemas for all core features
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🔧 Installation
 
-## Laravel Sponsors
+1.  **Clone the repository:**
+    ```bash
+    git clone [your-repository-url]
+    cd perfume-al-wissam
+    ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2.  **Install dependencies:**
+    ```bash
+    composer install
+    npm install && npm run build
+    ```
 
-### Premium Partners
+3.  **Configure environment:**
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+    Update `.env` with your database credentials.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+4.  **Run migrations:**
+    ```bash
+    php artisan migrate
+    ```
 
-## Contributing
+5.  **Start the development server:**
+    ```bash
+    php artisan serve
+    ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+6.  **Access the application:**
+    - Shop: `http://localhost:8000`
+    - Admin: `http://localhost:8000/admin/dashboard`
 
-## Code of Conduct
+## 👨‍💼 Admin Access
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The admin panel (`/admin`) is protected by middleware[citation:6]. Ensure you have a user account and are logged in to access product management and the analytics dashboard.
 
-## Security Vulnerabilities
+## 🔒 Security Considerations
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- **Content Security Policy (CSP)**: Consider implementing a CSP to control which external resources can be loaded, protecting against certain types of attacks like XSS[citation:3][citation:5]. The `spatie/laravel-csp` package can help with this[citation:3].
+- **Stay Updated**: Always keep Laravel and its dependencies updated to the latest versions to receive security fixes[citation:1].
 
-## License
+## 📄 License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

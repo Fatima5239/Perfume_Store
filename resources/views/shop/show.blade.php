@@ -201,7 +201,7 @@
     .contact-whatsapp-btn {
         width: 100%;
         padding: 16px;
-        background: #25D366; /* WhatsApp green */
+        background: #25D366; 
         color: white;
         border: none;
         border-radius: 4px;
@@ -479,7 +479,7 @@
 <script>
 // WhatsApp functionality
 function openWhatsApp() {
-    // Get selected size if any
+    
     const selectedSize = document.querySelector('.size-option.selected');
     let sizeText = '';
     
@@ -529,13 +529,12 @@ CONTACT INFORMATION
 
 Thank you for your interest in Al Wissam Perfumes!`;
     
-    // YOUR WHATSAPP NUMBER - REPLACE THIS WITH YOUR LEBANESE NUMBER!
-    const whatsappNumber = '96171419212'; // ⚠️ CHANGE THIS TO YOUR NUMBER!
     
-    // Clean the message for URL
+    const whatsappNumber = '96171419212'; /
+    
     const encodedMessage = encodeURIComponent(message);
     
-    // Open WhatsApp
+    
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
 }
 
@@ -546,21 +545,17 @@ document.querySelectorAll('.size-option').forEach(option => {
         const sizeMl = this.querySelector('.size-ml').textContent;
         const whatsappBtn = document.getElementById('whatsappBtn');
         
-        // If clicking 100ml, always keep it selected
+        
         if (sizeMl === '100ml' || sizeMl === '100') {
-            // Remove selected from all
             document.querySelectorAll('.size-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
-            // Select 100ml
             this.classList.add('selected');
             whatsappBtn.querySelector('.btn-text').textContent = `Contact for 100ml via WhatsApp`;
             return;
         }
         
-        // For other sizes: toggle selection
         if (!isCurrentlySelected) {
-            // Select this size, deselect others
             document.querySelectorAll('.size-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
@@ -582,7 +577,6 @@ document.querySelectorAll('.size-option').forEach(option => {
     });
 });
 
-// Auto-select 100ml as default on page load - FIXED
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         const sizeOptions = document.querySelectorAll('.size-option');
@@ -599,7 +593,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Always select 100ml if it exists
         if (size100ml) {
             // Remove any selections
             sizeOptions.forEach(opt => opt.classList.remove('selected'));

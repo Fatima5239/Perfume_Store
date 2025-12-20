@@ -543,7 +543,7 @@
             <div class="category-grid">
                 <!-- Women's - Elegant Rose Theme -->
                 <a href="{{ route('collections.women') }}" class="category-card">
-                    <img src="https://images.unsplash.com/photo-1563170351-be82bc888aa4" alt="Women's Collection">
+                    <img src="" alt="Women's Collection">
                     <div class="category-content">
                         <h3>Women's</h3>
                         <p>Elegant & feminine scents</p>
@@ -552,7 +552,7 @@
 
                 <!-- Men's - Sophisticated Dark Theme -->
                 <a href="{{ route('collections.men') }}" class="category-card">
-                    <img src="https://images.unsplash.com/photo-1590736969956-6d9c2a8d6971" alt="Men's Collection">
+                    <img src="" alt="Men's Collection">
                     <div class="category-content">
                         <h3>Men's</h3>
                         <p>Bold & sophisticated</p>
@@ -561,7 +561,7 @@
 
                 <!-- Unisex - Modern Minimalist -->
                 <a href="{{ route('collections.unisex') }}" class="category-card">
-                    <img src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6" alt="Unisex Collection">
+                    <img src="" alt="Unisex Collection">
                     <div class="category-content">
                         <h3>Unisex</h3>
                         <p>Modern & versatile</p>
@@ -640,7 +640,7 @@
                     <div class="trust-icon">
                         <i class="fas fa-award"></i>
                     </div>
-                    <h3>100% Authentic</h3>
+                    <h3> Authentic</h3>
                     <p>Guaranteed genuine perfumes from original brands</p>
                 </div>
 
@@ -656,7 +656,7 @@
                     <div class="trust-icon">
                         <i class="fas fa-gift"></i>
                     </div>
-                    <h3>Gift Ready</h3>
+                    <h3>Gifts</h3>
                     <p>Beautifully packaged for special occasions</p>
                 </div>
 

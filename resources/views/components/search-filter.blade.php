@@ -1563,7 +1563,6 @@
         }
 
         // Initialize for each route on the page
-        // Initialize for each route on the page
         document.addEventListener('DOMContentLoaded', function () {
             // Add ALL possible route variations
             const routes = ['collections', 'women', 'men', 'unisex', 'collections.women', 'collections.men', 'collections.unisex'];

@@ -479,7 +479,7 @@
 <script>
 // WhatsApp functionality
 function openWhatsApp() {
-    
+   
     const selectedSize = document.querySelector('.size-option.selected');
     let sizeText = '';
     
@@ -497,7 +497,7 @@ function openWhatsApp() {
     const productName = "{{ addslashes($product->name) }}";
     const brandName = "{{ addslashes($product->brand->name ?? '') }}";
     
-    // Create professional message
+
     const message = `AL WISSAM PERFUMES - NEW INQUIRY
 =========================================
 
@@ -510,6 +510,7 @@ ${brandName ? `• Brand: ${brandName}` : ''}
 SIZE REQUESTED
 =========================================
 ${sizeText}
+
 
 PRODUCT REFERENCE
 =========================================
@@ -529,40 +530,45 @@ CONTACT INFORMATION
 
 Thank you for your interest in Al Wissam Perfumes!`;
     
+   
+    const whatsappNumber = '961'; 
     
-    const whatsappNumber = '96171419212'; /
-    
+  
     const encodedMessage = encodeURIComponent(message);
     
-    
+
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
 }
 
-// Size selection functionality with toggle
+
 document.querySelectorAll('.size-option').forEach(option => {
     option.addEventListener('click', function() {
         const isCurrentlySelected = this.classList.contains('selected');
         const sizeMl = this.querySelector('.size-ml').textContent;
         const whatsappBtn = document.getElementById('whatsappBtn');
         
-        
+        // If clicking 100ml, always keep it selected
         if (sizeMl === '100ml' || sizeMl === '100') {
+            // Remove selected from all
             document.querySelectorAll('.size-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
+            // Select 100ml
             this.classList.add('selected');
             whatsappBtn.querySelector('.btn-text').textContent = `Contact for 100ml via WhatsApp`;
             return;
         }
         
+        // For other sizes: toggle selection
         if (!isCurrentlySelected) {
+            // Select this size, deselect others
             document.querySelectorAll('.size-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
             this.classList.add('selected');
             whatsappBtn.querySelector('.btn-text').textContent = `Contact for ${sizeMl} via WhatsApp`;
         } else {
-            // Deselecting a non-100ml size
+            
             this.classList.remove('selected');
             // Find and select 100ml
             const size100ml = Array.from(document.querySelectorAll('.size-option')).find(opt => {
@@ -577,6 +583,7 @@ document.querySelectorAll('.size-option').forEach(option => {
     });
 });
 
+// Auto-select 100ml as default on page load - FIXED
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         const sizeOptions = document.querySelectorAll('.size-option');
@@ -593,6 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        // Always select 100ml if it exists
         if (size100ml) {
             // Remove any selections
             sizeOptions.forEach(opt => opt.classList.remove('selected'));

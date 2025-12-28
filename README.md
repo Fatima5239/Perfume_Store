@@ -108,7 +108,7 @@ Your perfume store features a sophisticated search and filtering component that 
 The search component is implemented as a reusable Blade component that can be included on any collection page:
 ```php
 @include('components.search-filter', [
-    'route' => 'collections', // or 'collections.women', 'collections.men', etc.
+    'route' => 'collections', // or 'collections.women', 'collections.men'.
     'products' => $products,
     'searchPlaceholder' => 'Search perfumes...'
 ])

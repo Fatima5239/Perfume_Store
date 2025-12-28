@@ -8,7 +8,8 @@ use App\Models\Fragrance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\RateLimiter;
-use App\Services\TrackingService; // ADD THIS LINE
+use App\Services\TrackingService;
+use App\Models\Item;
 
 class ShopController extends Controller
 {
@@ -299,23 +300,189 @@ class ShopController extends Controller
     {
         return $this->showGenderCollection('unisex', "Unisex Collection", $request);
     }
-    
+
     /**
-     * Display single product
-     */
-    public function show($id)
-    {
-        try {
-            if (!is_numeric($id)) {
-                abort(404);
+ * Display gift items
+ */
+public function gifts(Request $request)
+{
+    try {
+        // Start with base query
+        $query = Item::where('status', 'active');
+        
+        // SEARCH FUNCTIONALITY
+        if ($request->filled('q')) {
+            $searchTerm = $this->sanitizeSearchQuery($request->q);
+            
+            if (strlen($searchTerm) >= 2) {
+                $cleanQuery = $this->escapeLikeQuery($searchTerm);
+                $query->where(function($q) use ($cleanQuery) {
+                    $q->where('name', 'LIKE', $cleanQuery)
+                      ->orWhere('description', 'LIKE', $cleanQuery);
+                });
+            }
+        }
+        
+        // PRICE RANGE FILTER
+        if ($request->filled('min_price') && $request->filled('max_price')) {
+            $minPrice = (float)$request->min_price;
+            $maxPrice = (float)$request->max_price;
+            
+            if ($minPrice <= $maxPrice) {
+                $query->whereBetween('price', [$minPrice, $maxPrice]);
+            } else {
+                $query->whereBetween('price', [$maxPrice, $minPrice]);
+            }
+        } else {
+            if ($request->filled('min_price')) {
+                $query->where('price', '>=', (float)$request->min_price);
             }
             
+            if ($request->filled('max_price')) {
+                $query->where('price', '<=', (float)$request->max_price);
+            }
+        }
+        
+        // SORTING
+        $sort = $request->get('sort', 'newest');
+        switch ($sort) {
+            case 'price_low':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_high':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'name':
+                $query->orderBy('name', 'asc');
+                break;
+            default: // newest
+                $query->orderBy('created_at', 'desc');
+        }
+        
+        $items = $query->paginate(12)->withQueryString();
+        
+        // Convert items to have similar structure as products for the component
+        $productsCollection = $items->map(function($item) {
+            return (object)[
+                'id' => $item->id,
+                'name' => $item->name,
+                'description' => $item->description,
+                'price_100ml' => $item->price, // Map price to price_100ml for component
+                'discount_100ml' => null, // Gift items don't have discount
+                'main_image' => $item->image,
+                'brand' => (object)['name' => 'Gift Item'], // Default brand for component
+                'brand_id' => null,
+                'sizes' => collect(), // Empty for gift items
+                'is_gift' => true,
+            ];
+        });
+        
+        // Create a paginator with the transformed collection
+        $products = new \Illuminate\Pagination\LengthAwarePaginator(
+            $productsCollection,
+            $items->total(),
+            $items->perPage(),
+            $items->currentPage(),
+            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()]
+        );
+        
+        // ========== ADD TRACKING HERE ==========
+        if ($request->filled('q')) {
+            TrackingService::trackSearch($request, $items);
+        }
+        TrackingService::trackPageView($request, 'gifts');
+        // ========== END TRACKING ==========
+        
+        return view('shop.items', [ // This points to shop/items.blade.php
+            'products' => $products,
+            'items' => $items,
+            'filters' => $request->only(['min_price', 'max_price', 'sort', 'q'])
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Gifts page error: ' . $e->getMessage());
+        return view('shop.error')->with('message', 'Unable to load gift items.');
+    }
+}
+    
+    /**
+ * Display single product or gift item
+ */
+public function show($id)
+{
+    try {
+        if (!is_numeric($id)) {
+            abort(404);
+        }
+        
+        $product = null;
+        $isGiftItem = false;
+        
+        // First check if it's a gift item (Item model)
+        $item = Item::where('status', 'active')->find($id);
+        
+        if ($item) {
+            // It's a gift item
+            $isGiftItem = true;
+            
+            // Convert Item to have similar structure as Product for the view
+            $product = (object)[
+                'id' => $item->id,
+                'name' => $item->name,
+                'description' => $item->description,
+                'price_100ml' => $item->price,
+                'discount_100ml' => null,
+                'main_image' => $item->image,
+                'brand' => (object)['name' => 'Gift Item'],
+                'brand_id' => null,
+                'gender' => null,
+                'fragrance_notes' => null,
+                'sizes' => collect(),
+                'fragrances' => collect(),
+                'is_gift' => true, // This tells the view it's a gift item
+                'available' => true,
+                'status' => 'active'
+            ];
+        } else {
+            // Not a gift item, check if it's a product (perfume)
             $product = Product::where('status', 'active')
                 ->where('available', true)
                 ->with(['brand', 'sizes', 'fragrances'])
-                ->findOrFail($id);
+                ->find($id);
             
-            // RELATED PRODUCTS
+            if (!$product) {
+                abort(404);
+            }
+            
+            // It's a perfume, add is_gift flag
+            $product->is_gift = false;
+            $isGiftItem = false;
+        }
+        
+        // RELATED PRODUCTS - Different logic for gifts vs perfumes
+        if ($isGiftItem) {
+            // For gift items: show other gift items
+            $relatedItems = Item::where('status', 'active')
+                ->where('id', '!=', $id)
+                ->inRandomOrder()
+                ->take(4)
+                ->get();
+            
+            // Convert items to have similar structure as products
+            $relatedProducts = $relatedItems->map(function($item) {
+                return (object)[
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'price_100ml' => $item->price,
+                    'discount_100ml' => null,
+                    'main_image' => $item->image,
+                    'brand' => (object)['name' => 'Gift Item'],
+                    'is_gift' => true,
+                    'available' => true,
+                ];
+            });
+        } else {
+            // For perfumes: show related perfumes
             $priceRange = $product->price_100ml * 0.3;
             $minPrice = max(0, $product->price_100ml - $priceRange);
             $maxPrice = $product->price_100ml + $priceRange;
@@ -330,7 +497,12 @@ class ShopController extends Controller
                 ->take(4)
                 ->get();
             
-            // Fallback
+            // Add is_gift flag to perfume related products
+            $relatedProducts->each(function($relatedProduct) {
+                $relatedProduct->is_gift = false;
+            });
+            
+            // Fallback if not enough related products
             if ($relatedProducts->count() < 4) {
                 $needed = 4 - $relatedProducts->count();
                 
@@ -344,27 +516,33 @@ class ShopController extends Controller
                     ->take($needed)
                     ->get();
                 
+                // Add is_gift flag to fallback products
+                $fallbackProducts->each(function($relatedProduct) {
+                    $relatedProduct->is_gift = false;
+                });
+                
                 $relatedProducts = $relatedProducts->merge($fallbackProducts);
             }
-            
-            // ========== ADD TRACKING HERE ==========
-            TrackingService::trackProductView($product->id);
-            TrackingService::trackPageView(request(), 'product');
-            // ========== END TRACKING ==========
-            
-            return view('shop.show', [
-                'product' => $product,
-                'relatedProducts' => $relatedProducts
-            ]);
-            
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            abort(404);
-        } catch (\Exception $e) {
-            \Log::error("Product show error (ID: {$id}): " . $e->getMessage());
-            return view('shop.error')->with('message', 'Unable to load product.');
         }
+        
+        // ========== ADD TRACKING HERE ==========
+        TrackingService::trackProductView($id);
+        TrackingService::trackPageView(request(), $isGiftItem ? 'gift_item' : 'product');
+        // ========== END TRACKING ==========
+        
+        return view('shop.show', [
+            'product' => $product,
+            'relatedProducts' => $relatedProducts,
+            'isGiftItem' => $isGiftItem // Pass this explicitly to the view
+        ]);
+        
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        abort(404);
+    } catch (\Exception $e) {
+        \Log::error("Product show error (ID: {$id}): " . $e->getMessage());
+        return view('shop.error')->with('message', 'Unable to load product.');
     }
-    
+}
     /**
      * AJAX search suggestions with XSS protection
      */

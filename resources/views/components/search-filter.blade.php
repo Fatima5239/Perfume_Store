@@ -3,7 +3,21 @@
     // Configuration
     $route = $route ?? 'collections';
     $searchPlaceholder = $searchPlaceholder ?? 'Search perfumes...';
-    $products = $products ?? collect(); // Products will be passed from parent
+    $products = $products ?? collect();
+    
+    // Add unique identifier to prevent conflicts
+    $componentId = $componentId ?? $route;
+
+    // Calculate max price dynamically
+    $maxPriceValue = 1000;
+    if ($products->isNotEmpty()) {
+        $maxPriceFromProducts = $products->max('price_100ml') ?? 1000;
+        $maxPriceValue = max(1000, ceil($maxPriceFromProducts / 100) * 100);
+    }
+
+    // FIXED: Better route detection
+    $isItemsPage = strpos(request()->path(), 'gifts') !== false;
+    $isPerfumePage = !$isItemsPage;
 
     // Calculate active filter count
     $activeFilterCount = 0;
@@ -17,6 +31,7 @@
 
 @push('styles')
     <style>
+        /* ALL YOUR EXISTING STYLES - EXACTLY THE SAME */
         /* ========== MAIN CONTAINER ========== */
         .collections-container {
             padding: 0;
@@ -88,6 +103,7 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             opacity: 0.7;
+            display: none;
         }
 
         @media (min-width: 1024px) {
@@ -857,16 +873,106 @@
             color: #666;
             margin-bottom: 20px;
         }
+
+        /* ========== ITEMS PAGE SPECIFIC STYLES ========== */
+        /* Gift items badge styling */
+        .gift-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Item description styling */
+        .item-description {
+            font-size: 13px;
+            color: #666;
+            margin: 8px 0 12px 0;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Gift item specific image fallback */
+        .gift-image-fallback {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gift-image-fallback i {
+            font-size: 40px;
+            color: #adb5bd;
+        }
+
+        /* Gift items brand styling */
+        .gift-brand {
+            color: #ff6b6b !important;
+            font-weight: 600 !important;
+        }
+
+        /* Price styling for gift items */
+        .gift-price {
+            color: #495057;
+            font-weight: 700;
+        }
+
+        /* No results styling for gift items */
+        .gift-no-results .no-results-icon {
+            color: #ff6b6b;
+        }
+
+        /* Gift items specific sale badge */
+        .gift-sale-badge {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e) !important;
+            color: white !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Gift items card hover effect */
+        .product-card.gift-item:hover {
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.15);
+            border-color: #ff6b6b;
+        }
+        
+        /* Special styling for gift items button */
+        .gift-view-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e) !important;
+            color: white !important;
+            border: none !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .gift-view-btn:hover {
+            background: linear-gradient(135deg, #ff5252, #ff6b6b) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
     </style>
 @endpush
 
-<div class="collections-container">
+<div class="collections-container" data-component-id="{{ $componentId }}">
     <!-- Subtle Loading Indicator (Under Navbar) -->
-    <div class="loading-indicator" id="loadingIndicator-{{ $route }}"></div>
+    <div class="loading-indicator" id="loadingIndicator-{{ $componentId }}"></div>
 
     <!-- Desktop Sidebar (Hidden on Mobile) -->
     <aside class="filter-sidebar">
-        <form method="GET" action="{{ route($route) }}" id="desktopFilterForm-{{ $route }}">
+        <form method="GET" action="{{ route($route) }}" id="desktopFilterForm-{{ $componentId }}">
             @if(request('q'))
                 <input type="hidden" name="q" value="{{ e(request('q')) }}">
             @endif
@@ -878,17 +984,17 @@
                 <!-- Price Inputs -->
                 <div class="price-range-inputs">
                     <div class="price-input-wrapper">
-                        <label for="min_price-{{ $route }}">From</label>
-                        <input type="number" name="min_price" id="min_price-{{ $route }}" class="price-input"
+                        <label for="min_price-{{ $componentId }}">From</label>
+                        <input type="number" name="min_price" id="min_price-{{ $componentId }}" class="price-input"
                             placeholder="Min" value="{{ request('min_price') }}" min="0" step="1"
-                            onchange="updatePriceFromInput('desktop', '{{ $route }}')">
+                            onchange="updatePriceFromInput('desktop', '{{ $componentId }}')">
                     </div>
                     <div class="price-separator">–</div>
                     <div class="price-input-wrapper">
-                        <label for="max_price-{{ $route }}">To</label>
-                        <input type="number" name="max_price" id="max_price-{{ $route }}" class="price-input"
-                            placeholder="Max" value="{{ request('max_price', 1000) }}" min="0" step="1"
-                            onchange="updatePriceFromInput('desktop', '{{ $route }}')">
+                        <label for="max_price-{{ $componentId }}">To</label>
+                        <input type="number" name="max_price" id="max_price-{{ $componentId }}" class="price-input"
+                            placeholder="Max" value="{{ request('max_price', $maxPriceValue) }}" min="0" step="1"
+                            onchange="updatePriceFromInput('desktop', '{{ $componentId }}')">
                     </div>
                 </div>
 
@@ -896,28 +1002,28 @@
                 <div class="price-range-container">
                     <div class="price-range-slider-container">
                         <div class="price-range-slider-track"></div>
-                        <div class="price-range-slider-track-fill" id="desktopPriceTrack-{{ $route }}"></div>
-                        <div class="price-range-slider-handle" id="desktopMinHandle-{{ $route }}" style="left: 0%;"
+                        <div class="price-range-slider-track-fill" id="desktopPriceTrack-{{ $componentId }}"></div>
+                        <div class="price-range-slider-handle" id="desktopMinHandle-{{ $componentId }}" style="left: 0%;"
                             data-value="0">
                         </div>
-                        <div class="price-range-slider-handle" id="desktopMaxHandle-{{ $route }}" style="left: 100%;"
-                            data-value="1000"></div>
+                        <div class="price-range-slider-handle" id="desktopMaxHandle-{{ $componentId }}" style="left: 100%;"
+                            data-value="{{ $maxPriceValue }}"></div>
                     </div>
                     <div class="price-range-labels">
                         <span>$0</span>
-                        <span>$1000</span>
+                        <span>${{ $maxPriceValue }}</span>
                     </div>
                     <div class="price-range-values">
-                        <span>$<span id="desktopMinDisplay-{{ $route }}">0</span></span>
-                        <span>$<span id="desktopMaxDisplay-{{ $route }}">1000</span></span>
+                        <span>$<span id="desktopMinDisplay-{{ $componentId }}">0</span></span>
+                        <span>$<span id="desktopMaxDisplay-{{ $componentId }}">{{ $maxPriceValue }}</span></span>
                     </div>
                 </div>
             </div>
 
             <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button type="submit" class="apply-btn" id="desktopApplyBtn-{{ $route }}" style="flex: 1;">Apply
+                <button type="submit" class="apply-btn" id="desktopApplyBtn-{{ $componentId }}" style="flex: 1;">Apply
                     Filters</button>
-                <button type="button" class="reset-btn" onclick="clearAllFilters('{{ $route }}')"
+                <button type="button" class="reset-btn" onclick="clearAllFilters('{{ $route }}', '{{ $componentId }}')"
                     style="text-align: center; padding: 14px;">Clear All</button>
             </div>
         </form>
@@ -927,12 +1033,12 @@
     <div class="products-area">
         <!-- Search Bar -->
         <div class="search-bar">
-            <form method="GET" action="{{ route($route) }}" id="searchForm-{{ $route }}">
+            <form method="GET" action="{{ route($route) }}" id="searchForm-{{ $componentId }}">
                 <div class="search-wrapper">
                     <input type="text" name="q" value="{{ e(request('q', '')) }}" placeholder="{{ $searchPlaceholder }}"
-                        class="search-input" id="searchInput-{{ $route }}" maxlength="100" aria-label="Search perfumes"
+                        class="search-input" id="searchInput-{{ $componentId }}" maxlength="100" aria-label="Search perfumes"
                         autocomplete="off">
-                    <button type="button" class="filter-toggle-btn" id="mobileFilterToggle-{{ $route }}"
+                    <button type="button" class="filter-toggle-btn" id="mobileFilterToggle-{{ $componentId }}"
                         aria-label="Open filters">
                         <span class="filter-icon">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -962,29 +1068,29 @@
                 @if(request('q'))
                     <span class="filter-tag">
                         "{{ e(request('q')) }}"
-                        <button class="remove-filter-btn" onclick="removeFilter('q', '{{ $route }}')">×</button>
+                        <button class="remove-filter-btn" onclick="removeFilter('q', '{{ $route }}', '{{ $componentId }}')">×</button>
                     </span>
                 @endif
 
                 @if(request('min_price') || request('max_price'))
                     @php
                         $minPrice = request('min_price', 0);
-                        $maxPrice = request('max_price', '1000+');
+                        $maxPrice = request('max_price', $maxPriceValue . '+');
                     @endphp
                     <span class="filter-tag">
                         ${{ $minPrice }} - ${{ $maxPrice }}
-                        <button class="remove-filter-btn" onclick="removePriceFilter('{{ $route }}')">×</button>
+                        <button class="remove-filter-btn" onclick="removePriceFilter('{{ $route }}', '{{ $componentId }}')">×</button>
                     </span>
                 @endif
 
                 @if(request('sort') && request('sort') != 'newest')
                     <span class="filter-tag">
                         {{ ucfirst(str_replace('_', ' ', e(request('sort')))) }}
-                        <button class="remove-filter-btn" onclick="removeFilter('sort', '{{ $route }}')">×</button>
+                        <button class="remove-filter-btn" onclick="removeFilter('sort', '{{ $route }}', '{{ $componentId }}')">×</button>
                     </span>
                 @endif
 
-                <button onclick="clearAllFilters('{{ $route }}')" class="clear-all-btn">Clear all</button>
+                <button onclick="clearAllFilters('{{ $route }}', '{{ $componentId }}')" class="clear-all-btn">Clear all</button>
             </div>
         @endif
 
@@ -1002,38 +1108,65 @@
                 @endif
             </div>
 
-            <select name="sort" class="sort-select" onchange="updateSort(this.value, '{{ $route }}')">
+            <select name="sort" class="sort-select" onchange="updateSort(this.value, '{{ $route }}', '{{ $componentId }}')">
                 <option value="newest" {{ request('sort', 'newest') == 'newest' ? 'selected' : '' }}>Newest</option>
-                <option value="price_low" {{ request('sort') == 'price_low' ? 'selected' : '' }}>Price: Low to High
-                </option>
-                <option value="price_high" {{ request('sort') == 'price_high' ? 'selected' : '' }}>Price: High to Low
-                </option>
+                <option value="price_low" {{ request('sort') == 'price_low' ? 'selected' : '' }}>Price: Low to High</option>
+                <option value="price_high" {{ request('sort') == 'price_high' ? 'selected' : '' }}>Price: High to Low</option>
                 <option value="name" {{ request('sort') == 'name' ? 'selected' : '' }}>Name: A-Z</option>
             </select>
         </div>
 
+        <!-- Skeleton Loader (hidden by default) -->
+        <div class="skeleton-grid" id="skeletonLoader-{{ $componentId }}">
+            @for($i = 0; $i < 6; $i++)
+                <div class="skeleton-card">
+                    <div class="skeleton-image"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-text short"></div>
+                        <div class="skeleton-text medium"></div>
+                        <div class="skeleton-button"></div>
+                    </div>
+                </div>
+            @endfor
+        </div>
+
         <!-- Products Grid -->
-        @if(isset($products) && $products->count() > 0)
-            <div class="products-grid" id="productsGrid-{{ $route }}">
+        @php
+            $hasProducts = isset($products) && $products->count() > 0;
+        @endphp
+        
+        @if($hasProducts)
+            <div class="products-grid" id="productsGrid-{{ $componentId }}">
                 @foreach($products as $product)
                     <div class="product-card">
-                        @if($product->discount_100ml && $product->price_100ml > 0)
+                        {{-- Different badges for items vs perfumes --}}
+                        @if($isItemsPage)
+                            <div class="sale-badge" style="background: #ff6b6b;">
+                                🎁 ITEM
+                            </div>
+                        @elseif($product->discount_100ml && $product->price_100ml > 0)
                             <div class="sale-badge">
                                 SALE
                             </div>
                         @endif
 
                         <div class="product-image">
-                            <img src="{{ $product->main_image ? asset('storage/' . e($product->main_image)) : 'https://images.unsplash.com/photo-1585123334904-89d6f8e5f7b1' }}"
-                                alt="{{ e($product->name) }}" loading="lazy">
+                            @if($product->main_image)
+                                <img src="{{ asset('storage/' . e($product->main_image)) }}" alt="{{ e($product->name) }}"
+                                    loading="lazy">
+                            @else
+                                <img src="{{ $isItemsPage ? 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf' : 'https://images.unsplash.com/photo-1585123334904-89d6f8e5f7b1' }}"
+                                    alt="{{ e($product->name) }}" loading="lazy">
+                            @endif
                         </div>
 
                         <div class="product-info">
-                            <div class="product-brand">{{ e($product->brand->name ?? 'Brand') }}</div>
+                            <div class="product-brand">{{ e($product->brand->name ?? ($isItemsPage ? 'Gift Item' : 'Brand')) }}
+                            </div>
                             <div class="product-name">{{ e($product->name) }}</div>
 
                             <div class="product-price">
-                                @if($product->discount_100ml)
+                                @if(!$isItemsPage && $product->discount_100ml)
                                     <span class="current-price">${{ number_format($product->discount_100ml, 2) }}</span>
                                     <span class="original-price">${{ number_format($product->price_100ml, 2) }}</span>
                                 @else
@@ -1041,9 +1174,19 @@
                                 @endif
                             </div>
 
-                            <a href="{{ route('product.show', $product->id) }}" class="view-product-btn">
-                                View Product
-                            </a>
+                            {{-- FIXED: All products use View Product button with product.show route --}}
+                            @if($isItemsPage)
+                                {{-- For gift items --}}
+                                <a href="{{ route('product.show', $product->id) }}" 
+                                   class="view-product-btn gift-view-btn">
+                                    View Product
+                                </a>
+                            @else
+                                {{-- For perfumes --}}
+                                <a href="{{ route('product.show', $product->id) }}" class="view-product-btn">
+                                    View Product
+                                </a>
+                            @endif
                         </div>
                     </div>
                 @endforeach
@@ -1057,10 +1200,14 @@
             @endif
         @else
             <div style="text-align: center; padding: 60px 20px;">
-                <div style="font-size: 48px; color: #ddd; margin-bottom: 20px;">👃</div>
-                <h3 style="font-size: 18px; margin-bottom: 10px; color: #333;">No perfumes found</h3>
+                <div style="font-size: 48px; color: #ddd; margin-bottom: 20px;">
+                    {{ $isItemsPage ? '🎁' : '👃' }}
+                </div>
+                <h3 style="font-size: 18px; margin-bottom: 10px; color: #333;">
+                    {{ $isItemsPage ? 'No gift items found' : 'No perfumes found' }}
+                </h3>
                 <p style="color: #666; margin-bottom: 20px;">Try adjusting your search or filters</p>
-                <button onclick="clearAllFilters('{{ $route }}')"
+                <button onclick="clearAllFilters('{{ $route }}', '{{ $componentId }}')"
                     style="display: inline-block; padding: 12px 24px; background: #000; color: white; text-decoration: none; border-radius: 8px; font-weight: 500; border: none; cursor: pointer;">
                     Clear All Filters
                 </button>
@@ -1070,15 +1217,15 @@
 </div>
 
 <!-- Mobile Filter Drawer -->
-<div class="filter-drawer-overlay" id="filterOverlay-{{ $route }}"></div>
-<div class="filter-drawer" id="filterDrawer-{{ $route }}">
+<div class="filter-drawer-overlay" id="filterOverlay-{{ $componentId }}"></div>
+<div class="filter-drawer" id="filterDrawer-{{ $componentId }}">
     <div class="swipe-indicator"></div>
     <div class="drawer-header">
         <div class="drawer-title">Filter Products</div>
-        <button class="close-drawer-btn" id="closeDrawer-{{ $route }}">&times;</button>
+        <button class="close-drawer-btn" id="closeDrawer-{{ $componentId }}">&times;</button>
     </div>
 
-    <form method="GET" action="{{ route($route) }}" id="mobileFilterForm-{{ $route }}">
+    <form method="GET" action="{{ route($route) }}" id="mobileFilterForm-{{ $componentId }}">
         <div class="drawer-content">
             @if(request('q'))
                 <input type="hidden" name="q" value="{{ e(request('q')) }}">
@@ -1090,17 +1237,17 @@
 
                 <div class="price-range-inputs">
                     <div class="price-input-wrapper">
-                        <label for="mobile_min_price-{{ $route }}">From</label>
-                        <input type="number" name="min_price" id="mobile_min_price-{{ $route }}" class="price-input"
+                        <label for="mobile_min_price-{{ $componentId }}">From</label>
+                        <input type="number" name="min_price" id="mobile_min_price-{{ $componentId }}" class="price-input"
                             placeholder="Min" value="{{ request('min_price') }}" min="0" step="1"
-                            onchange="updatePriceFromInput('mobile', '{{ $route }}')">
+                            onchange="updatePriceFromInput('mobile', '{{ $componentId }}')">
                     </div>
                     <div class="price-separator">–</div>
                     <div class="price-input-wrapper">
-                        <label for="mobile_max_price-{{ $route }}">To</label>
-                        <input type="number" name="max_price" id="mobile_max_price-{{ $route }}" class="price-input"
-                            placeholder="Max" value="{{ request('max_price', 1000) }}" min="0" step="1"
-                            onchange="updatePriceFromInput('mobile', '{{ $route }}')">
+                        <label for="mobile_max_price-{{ $componentId }}">To</label>
+                        <input type="number" name="max_price" id="mobile_max_price-{{ $componentId }}" class="price-input"
+                            placeholder="Max" value="{{ request('max_price', $maxPriceValue) }}" min="0" step="1"
+                            onchange="updatePriceFromInput('mobile', '{{ $componentId }}')">
                     </div>
                 </div>
 
@@ -1108,480 +1255,521 @@
                 <div class="price-range-container">
                     <div class="price-range-slider-container">
                         <div class="price-range-slider-track"></div>
-                        <div class="price-range-slider-track-fill" id="mobilePriceTrack-{{ $route }}"></div>
-                        <div class="price-range-slider-handle" id="mobileMinHandle-{{ $route }}" style="left: 0%;"
+                        <div class="price-range-slider-track-fill" id="mobilePriceTrack-{{ $componentId }}"></div>
+                        <div class="price-range-slider-handle" id="mobileMinHandle-{{ $componentId }}" style="left: 0%;"
                             data-value="0">
                         </div>
-                        <div class="price-range-slider-handle" id="mobileMaxHandle-{{ $route }}" style="left: 100%;"
-                            data-value="1000"></div>
+                        <div class="price-range-slider-handle" id="mobileMaxHandle-{{ $componentId }}" style="left: 100%;"
+                            data-value="{{ $maxPriceValue }}"></div>
                     </div>
                     <div class="price-range-labels">
                         <span>$0</span>
-                        <span>$1000</span>
+                        <span>${{ $maxPriceValue }}</span>
                     </div>
                     <div class="price-range-values">
-                        <span>$<span id="mobileMinDisplay-{{ $route }}">0</span></span>
-                        <span>$<span id="mobileMaxDisplay-{{ $route }}">1000</span></span>
+                        <span>$<span id="mobileMinDisplay-{{ $componentId }}">0</span></span>
+                        <span>$<span id="mobileMaxDisplay-{{ $componentId }}">{{ $maxPriceValue }}</span></span>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="drawer-footer">
-            <button type="button" class="apply-btn" id="mobileApplyBtn-{{ $route }}"
-                onclick="applyMobileFilters('{{ $route }}')">Apply Filters</button>
-            <button type="button" class="reset-btn" onclick="clearAllFilters('{{ $route }}')">Reset All</button>
+            <button type="button" class="apply-btn" id="mobileApplyBtn-{{ $componentId }}"
+                onclick="applyMobileFilters('{{ $componentId }}')">Apply Filters</button>
+            <button type="button" class="reset-btn" onclick="clearAllFilters('{{ $route }}', '{{ $componentId }}')">Reset All</button>
         </div>
     </form>
 </div>
 
 @push('scripts')
     <script>
-        // ========== SUBTLE LOADING INDICATOR ==========
-        let loadingTimeout = {};
+        // ========== SEARCH FILTER MANAGER ==========
+        const SearchFilter = (function() {
+            // Private variables
+            const instances = new Map();
+            let activeFilterManager = null;
 
-        function showLoading(route) {
-            const indicator = document.getElementById('loadingIndicator-' + route);
-            if (indicator) {
-                indicator.classList.add('active');
-            }
-
-            // Auto-hide after 3 seconds (safety net)
-            loadingTimeout[route] = setTimeout(() => {
-                hideLoading(route);
-            }, 3000);
-        }
-
-        function hideLoading(route) {
-            const indicator = document.getElementById('loadingIndicator-' + route);
-            if (indicator) {
-                indicator.classList.remove('active');
-            }
-            clearTimeout(loadingTimeout[route]);
-        }
-
-        // ========== PRICE RANGE SLIDER FUNCTIONS ==========
-        let isDraggingHandle = {};
-        let activeHandle = {};
-        let maxPrice = 1000;
-
-        function initializePriceSlider(type, route) {
-            const minInput = document.getElementById(type === 'desktop' ? 'min_price-' + route : 'mobile_min_price-' + route);
-            const maxInput = document.getElementById(type === 'desktop' ? 'max_price-' + route : 'mobile_max_price-' + route);
-            const minDisplay = document.getElementById(type === 'desktop' ? 'desktopMinDisplay-' + route : 'mobileMinDisplay-' + route);
-            const maxDisplay = document.getElementById(type === 'desktop' ? 'desktopMaxDisplay-' + route : 'mobileMaxDisplay-' + route);
-            const priceTrack = document.getElementById(type === 'desktop' ? 'desktopPriceTrack-' + route : 'mobilePriceTrack-' + route);
-            const minHandle = document.getElementById(type === 'desktop' ? 'desktopMinHandle-' + route : 'mobileMinHandle-' + route);
-            const maxHandle = document.getElementById(type === 'desktop' ? 'desktopMaxHandle-' + route : 'mobileMaxHandle-' + route);
-
-            // Set initial values
-            const minValue = parseInt(minInput.value) || 0;
-            const maxValue = parseInt(maxInput.value) || 1000;
-
-            // Calculate percentages
-            const minPercent = (minValue / maxPrice) * 100;
-            const maxPercent = (maxValue / maxPrice) * 100;
-
-            // Update handles and track
-            minHandle.style.left = minPercent + '%';
-            minHandle.setAttribute('data-value', minValue);
-            maxHandle.style.left = maxPercent + '%';
-            maxHandle.setAttribute('data-value', maxValue);
-
-            // Update track fill
-            priceTrack.style.left = minPercent + '%';
-            priceTrack.style.width = (maxPercent - minPercent) + '%';
-
-            // Update displays
-            minDisplay.textContent = minValue;
-            maxDisplay.textContent = maxValue;
-
-            // Add drag functionality
-            [minHandle, maxHandle].forEach(handle => {
-                handle.addEventListener('mousedown', function (e) {
-                    startDrag(e, route);
-                });
-                handle.addEventListener('touchstart', function (e) {
-                    startDragTouch(e, route);
-                });
-            });
-
-            function startDrag(e, route) {
-                e.preventDefault();
-                isDraggingHandle[route] = true;
-                activeHandle[route] = e.target;
-
-                document.addEventListener('mousemove', function (e) { drag(e, route); });
-                document.addEventListener('mouseup', function () { stopDrag(route); });
-            }
-
-            function startDragTouch(e, route) {
-                e.preventDefault();
-                isDraggingHandle[route] = true;
-                activeHandle[route] = e.target;
-
-                document.addEventListener('touchmove', function (e) { dragTouch(e, route); });
-                document.addEventListener('touchend', function () { stopDrag(route); });
-            }
-
-            function dragTouch(e, route) {
-                if (e.touches && e.touches[0]) {
-                    drag(e.touches[0], route);
+            // Price Slider Manager
+            class PriceSlider {
+                constructor(componentId, type) {
+                    this.componentId = componentId;
+                    this.type = type;
+                    this.isDragging = false;
+                    this.activeHandle = null;
+                    this.maxPrice = 1000;
+                    this.init();
                 }
-            }
 
-            function drag(e, route) {
-                if (!isDraggingHandle[route] || !activeHandle[route]) return;
+                init() {
+                    this.minHandle = document.getElementById(`${this.type}MinHandle-${this.componentId}`);
+                    this.maxHandle = document.getElementById(`${this.type}MaxHandle-${this.componentId}`);
+                    
+                    if (!this.minHandle || !this.maxHandle) return;
+                    
+                    // Get max price from data attribute
+                    this.maxPrice = parseInt(this.maxHandle.getAttribute('data-value')) || 1000;
+                    
+                    this.setupInitialValues();
+                    this.bindEvents();
+                }
 
-                const sliderContainer = activeHandle[route].closest('.price-range-slider-container');
-                const rect = sliderContainer.getBoundingClientRect();
-                let clientX = e.clientX;
+                setupInitialValues() {
+                    const minInput = this.getInput('min');
+                    const maxInput = this.getInput('max');
+                    
+                    const minValue = parseInt(minInput.value) || 0;
+                    const maxValue = parseInt(maxInput.value) || this.maxPrice;
+                    
+                    this.updateUI(minValue, maxValue);
+                }
 
-                // Calculate position percentage
-                let percent = ((clientX - rect.left) / rect.width) * 100;
-                percent = Math.max(0, Math.min(100, percent));
+                getInput(which) {
+                    const prefix = this.type === 'desktop' ? '' : 'mobile_';
+                    return document.getElementById(`${prefix}${which}_price-${this.componentId}`);
+                }
 
-                // Calculate value
-                const value = Math.round((percent / 100) * maxPrice);
+                bindEvents() {
+                    // Remove existing listeners by cloning
+                    const newMinHandle = this.minHandle.cloneNode(true);
+                    const newMaxHandle = this.maxHandle.cloneNode(true);
+                    this.minHandle.parentNode.replaceChild(newMinHandle, this.minHandle);
+                    this.maxHandle.parentNode.replaceChild(newMaxHandle, this.maxHandle);
+                    
+                    this.minHandle = newMinHandle;
+                    this.maxHandle = newMaxHandle;
 
-                // Update handle
-                if (activeHandle[route].id.includes('Min')) {
-                    const maxValue = parseInt(maxHandle.getAttribute('data-value'));
-                    if (value > maxValue) {
-                        activeHandle[route].style.left = (maxValue / maxPrice) * 100 + '%';
-                        activeHandle[route].setAttribute('data-value', maxValue);
-                        updatePriceValues(type, route, maxValue, maxValue);
+                    [this.minHandle, this.maxHandle].forEach(handle => {
+                        handle.addEventListener('mousedown', (e) => this.startDrag(e));
+                        handle.addEventListener('touchstart', (e) => this.startDragTouch(e));
+                    });
+                }
+
+                startDrag(e) {
+                    e.preventDefault();
+                    this.isDragging = true;
+                    this.activeHandle = e.target;
+                    activeFilterManager = this;
+
+                    document.addEventListener('mousemove', this.drag);
+                    document.addEventListener('mouseup', this.stopDrag);
+                }
+
+                startDragTouch(e) {
+                    e.preventDefault();
+                    this.isDragging = true;
+                    this.activeHandle = e.target;
+                    activeFilterManager = this;
+
+                    document.addEventListener('touchmove', this.dragTouch);
+                    document.addEventListener('touchend', this.stopDrag);
+                }
+
+                drag = (e) => {
+                    if (!this.isDragging || !this.activeHandle) return;
+
+                    const sliderContainer = this.activeHandle.closest('.price-range-slider-container');
+                    const rect = sliderContainer.getBoundingClientRect();
+                    const clientX = e.clientX;
+
+                    let percent = ((clientX - rect.left) / rect.width) * 100;
+                    percent = Math.max(0, Math.min(100, percent));
+
+                    const value = Math.round((percent / 100) * this.maxPrice);
+
+                    const minValue = parseInt(this.minHandle.getAttribute('data-value'));
+                    const maxValue = parseInt(this.maxHandle.getAttribute('data-value'));
+
+                    if (this.activeHandle.id.includes('Min')) {
+                        const newMin = Math.min(value, maxValue);
+                        this.updateHandle(this.minHandle, newMin);
+                        this.updateUI(newMin, maxValue);
                     } else {
-                        activeHandle[route].style.left = percent + '%';
-                        activeHandle[route].setAttribute('data-value', value);
-                        updatePriceValues(type, route, value, maxValue);
+                        const newMax = Math.max(value, minValue);
+                        this.updateHandle(this.maxHandle, newMax);
+                        this.updateUI(minValue, newMax);
                     }
-                } else {
-                    const minValue = parseInt(minHandle.getAttribute('data-value'));
-                    if (value < minValue) {
-                        activeHandle[route].style.left = (minValue / maxPrice) * 100 + '%';
-                        activeHandle[route].setAttribute('data-value', minValue);
-                        updatePriceValues(type, route, minValue, minValue);
-                    } else {
-                        activeHandle[route].style.left = percent + '%';
-                        activeHandle[route].setAttribute('data-value', value);
-                        updatePriceValues(type, route, minValue, value);
+
+                    // Auto-submit desktop form
+                    if (this.type === 'desktop') {
+                        setTimeout(() => {
+                            this.submitDesktopForm();
+                        }, 300);
                     }
                 }
 
-                // Update track
-                const minPercent = parseFloat(minHandle.style.left);
-                const maxPercent = parseFloat(maxHandle.style.left);
-                priceTrack.style.left = minPercent + '%';
-                priceTrack.style.width = (maxPercent - minPercent) + '%';
+                dragTouch = (e) => {
+                    if (e.touches && e.touches[0]) {
+                        this.drag(e.touches[0]);
+                    }
+                }
+
+                stopDrag = () => {
+                    this.isDragging = false;
+                    this.activeHandle = null;
+                    activeFilterManager = null;
+
+                    document.removeEventListener('mousemove', this.drag);
+                    document.removeEventListener('mouseup', this.stopDrag);
+                    document.removeEventListener('touchmove', this.dragTouch);
+                    document.removeEventListener('touchend', this.stopDrag);
+                }
+
+                updateHandle(handle, value) {
+                    const percent = (value / this.maxPrice) * 100;
+                    handle.style.left = percent + '%';
+                    handle.setAttribute('data-value', value);
+                }
+
+                updateUI(minValue, maxValue) {
+                    const minPercent = (minValue / this.maxPrice) * 100;
+                    const maxPercent = (maxValue / this.maxPrice) * 100;
+                    
+                    const priceTrack = document.getElementById(`${this.type}PriceTrack-${this.componentId}`);
+                    const minDisplay = document.getElementById(`${this.type}MinDisplay-${this.componentId}`);
+                    const maxDisplay = document.getElementById(`${this.type}MaxDisplay-${this.componentId}`);
+                    const minInput = this.getInput('min');
+                    const maxInput = this.getInput('max');
+
+                    if (priceTrack) {
+                        priceTrack.style.left = minPercent + '%';
+                        priceTrack.style.width = (maxPercent - minPercent) + '%';
+                    }
+
+                    if (minDisplay) minDisplay.textContent = minValue;
+                    if (maxDisplay) maxDisplay.textContent = maxValue;
+                    if (minInput) minInput.value = minValue;
+                    if (maxInput) maxInput.value = maxValue;
+                }
+
+                updateFromInput() {
+                    const minInput = this.getInput('min');
+                    const maxInput = this.getInput('max');
+                    
+                    let minValue = parseInt(minInput.value) || 0;
+                    let maxValue = parseInt(maxInput.value) || this.maxPrice;
+
+                    if (minValue > maxValue) {
+                        minValue = maxValue;
+                        minInput.value = minValue;
+                    }
+
+                    minValue = Math.max(0, Math.min(this.maxPrice, minValue));
+                    maxValue = Math.max(0, Math.min(this.maxPrice, maxValue));
+
+                    this.updateUI(minValue, maxValue);
+
+                    if (this.type === 'desktop') {
+                        setTimeout(() => {
+                            this.submitDesktopForm();
+                        }, 500);
+                    }
+                }
+
+                submitDesktopForm() {
+                    const form = document.getElementById(`desktopFilterForm-${this.componentId}`);
+                    const applyBtn = document.getElementById(`desktopApplyBtn-${this.componentId}`);
+                    
+                    if (form && applyBtn) {
+                        showLoading(this.componentId);
+                        applyBtn.classList.add('btn-loading');
+                        setTimeout(() => form.submit(), 300);
+                    }
+                }
             }
 
-            function stopDrag(route) {
-                isDraggingHandle[route] = false;
-                activeHandle[route] = null;
+            // Main Filter Instance
+            class FilterInstance {
+                constructor(componentId, route) {
+                    this.componentId = componentId;
+                    this.route = route;
+                    this.searchTimeout = null;
+                    this.loadingTimeout = null;
+                    this.priceSliders = {};
+                    this.init();
+                }
 
-                document.removeEventListener('mousemove', function (e) { drag(e, route); });
-                document.removeEventListener('mouseup', function () { stopDrag(route); });
-                document.removeEventListener('touchmove', function (e) { dragTouch(e, route); });
-                document.removeEventListener('touchend', function () { stopDrag(route); });
+                init() {
+                    // Initialize price sliders
+                    this.priceSliders.desktop = new PriceSlider(this.componentId, 'desktop');
+                    
+                    // Setup search input
+                    this.setupSearchInput();
+                    
+                    // Setup mobile drawer
+                    this.setupMobileDrawer();
+                    
+                    // Auto-hide loading
+                    this.autoHideLoading();
+                }
 
-                // Auto-submit desktop form
-                if (type === 'desktop') {
+                setupSearchInput() {
+                    const searchInput = document.getElementById(`searchInput-${this.componentId}`);
+                    if (!searchInput) return;
+
+                    searchInput.addEventListener('input', () => {
+                        clearTimeout(this.searchTimeout);
+
+                        searchInput.classList.add('searching');
+
+                        this.searchTimeout = setTimeout(() => {
+                            searchInput.classList.remove('searching');
+                            this.showLoading();
+                            searchInput.form.submit();
+                        }, 500);
+                    });
+                }
+
+                setupMobileDrawer() {
+                    const mobileFilterToggle = document.getElementById(`mobileFilterToggle-${this.componentId}`);
+                    const filterOverlay = document.getElementById(`filterOverlay-${this.componentId}`);
+                    const closeDrawer = document.getElementById(`closeDrawer-${this.componentId}`);
+                    const filterDrawer = document.getElementById(`filterDrawer-${this.componentId}`);
+
+                    if (mobileFilterToggle) {
+                        mobileFilterToggle.addEventListener('click', () => this.openFilterDrawer());
+                    }
+
+                    if (filterOverlay) {
+                        filterOverlay.addEventListener('click', () => this.closeFilterDrawer());
+                    }
+
+                    if (closeDrawer) {
+                        closeDrawer.addEventListener('click', () => this.closeFilterDrawer());
+                    }
+
+                    // Touch gestures for mobile
+                    if (filterDrawer) {
+                        let startX = 0;
+                        let currentX = 0;
+                        let isDragging = true;
+
+                        filterDrawer.addEventListener('touchstart', (e) => {
+                            startX = e.touches[0].clientX;
+                            currentX = startX;
+                            isDragging = true;
+                            filterDrawer.style.transition = 'none';
+                        });
+
+                        filterDrawer.addEventListener('touchmove', (e) => {
+                            if (!isDragging) return;
+                            currentX = e.touches[0].clientX;
+                            const diff = startX - currentX;
+                            if (diff < 0) return;
+                            filterDrawer.style.transform = `translateX(${-diff}px)`;
+                            filterOverlay.style.opacity = 1 - (diff / 320);
+                        });
+
+                        filterDrawer.addEventListener('touchend', () => {
+                            if (!isDragging) return;
+                            isDragging = false;
+                            filterDrawer.style.transition = 'transform 0.3s ease';
+                            filterOverlay.style.transition = 'opacity 0.3s ease';
+
+                            const diff = startX - currentX;
+                            if (diff > 100) {
+                                this.closeFilterDrawer();
+                            } else {
+                                filterDrawer.style.transform = 'translateX(0)';
+                                filterOverlay.style.opacity = 1;
+                            }
+                        });
+                    }
+                }
+
+                openFilterDrawer() {
+                    const filterOverlay = document.getElementById(`filterOverlay-${this.componentId}`);
+                    const filterDrawer = document.getElementById(`filterDrawer-${this.componentId}`);
+
+                    if (!filterOverlay || !filterDrawer) return;
+
+                    filterOverlay.classList.add('active');
+                    filterDrawer.classList.add('active');
+
+                    // Initialize mobile slider
                     setTimeout(() => {
-                        submitDesktopFilters(route);
-                    }, 300);
+                        if (!this.priceSliders.mobile) {
+                            this.priceSliders.mobile = new PriceSlider(this.componentId, 'mobile');
+                        }
+                    }, 100);
+                }
+
+                closeFilterDrawer() {
+                    const filterOverlay = document.getElementById(`filterOverlay-${this.componentId}`);
+                    const filterDrawer = document.getElementById(`filterDrawer-${this.componentId}`);
+
+                    if (!filterOverlay || !filterDrawer) return;
+
+                    filterOverlay.classList.remove('active');
+                    filterDrawer.classList.remove('active');
+                }
+
+                showLoading() {
+                    const indicator = document.getElementById(`loadingIndicator-${this.componentId}`);
+                    const skeleton = document.getElementById(`skeletonLoader-${this.componentId}`);
+                    const productsGrid = document.getElementById(`productsGrid-${this.componentId}`);
+                    
+                    if (indicator) indicator.classList.add('active');
+                    if (skeleton) skeleton.style.display = 'grid';
+                    if (productsGrid) productsGrid.style.display = 'none';
+
+                    // Clear any existing timeout
+                    if (this.loadingTimeout) {
+                        clearTimeout(this.loadingTimeout);
+                    }
+
+                    // Link to page load instead of fixed timeout
+                    this.loadingTimeout = setTimeout(() => {
+                        this.hideLoading();
+                    }, 5000); // 5 second safety net
+                }
+
+                hideLoading() {
+                    const indicator = document.getElementById(`loadingIndicator-${this.componentId}`);
+                    const skeleton = document.getElementById(`skeletonLoader-${this.componentId}`);
+                    const productsGrid = document.getElementById(`productsGrid-${this.componentId}`);
+                    
+                    if (indicator) indicator.classList.remove('active');
+                    if (skeleton) skeleton.style.display = 'none';
+                    if (productsGrid) productsGrid.style.display = 'grid';
+
+                    if (this.loadingTimeout) {
+                        clearTimeout(this.loadingTimeout);
+                        this.loadingTimeout = null;
+                    }
+                }
+
+                autoHideLoading() {
+                    window.addEventListener('load', () => {
+                        setTimeout(() => this.hideLoading(), 500);
+                    });
+                }
+
+                applyMobileFilters() {
+                    const form = document.getElementById(`mobileFilterForm-${this.componentId}`);
+                    const applyBtn = document.getElementById(`mobileApplyBtn-${this.componentId}`);
+                    const drawer = document.getElementById(`filterDrawer-${this.componentId}`);
+                    const overlay = document.getElementById(`filterOverlay-${this.componentId}`);
+
+                    if (!form || !applyBtn) return;
+
+                    this.showLoading();
+                    applyBtn.classList.add('btn-loading');
+
+                    if (drawer && overlay) {
+                        drawer.classList.remove('active');
+                        overlay.classList.remove('active');
+                    }
+
+                    form.submit();
                 }
             }
-        }
 
-        function updatePriceValues(type, route, minValue, maxValue) {
-            const minInput = document.getElementById(type === 'desktop' ? 'min_price-' + route : 'mobile_min_price-' + route);
-            const maxInput = document.getElementById(type === 'desktop' ? 'max_price-' + route : 'mobile_max_price-' + route);
-            const minDisplay = document.getElementById(type === 'desktop' ? 'desktopMinDisplay-' + route : 'mobileMinDisplay-' + route);
-            const maxDisplay = document.getElementById(type === 'desktop' ? 'desktopMaxDisplay-' + route : 'mobileMaxDisplay-' + route);
+            // Public API
+            return {
+                // Initialize all components
+                initializeAll() {
+                    document.querySelectorAll('[data-component-id]').forEach(container => {
+                        const componentId = container.dataset.componentId;
+                        const route = componentId; // Use componentId as route identifier
+                        
+                        if (componentId && !instances.has(componentId)) {
+                            const instance = new FilterInstance(componentId, route);
+                            instances.set(componentId, instance);
+                        }
+                    });
+                },
 
-            minInput.value = minValue;
-            maxInput.value = maxValue;
-            minDisplay.textContent = minValue;
-            maxDisplay.textContent = maxValue;
-        }
+                // Helper functions
+                showLoading(componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance) instance.showLoading();
+                },
 
-        function updatePriceFromInput(type, route) {
-            const minInput = document.getElementById(type === 'desktop' ? 'min_price-' + route : 'mobile_min_price-' + route);
-            const maxInput = document.getElementById(type === 'desktop' ? 'max_price-' + route : 'mobile_max_price-' + route);
-            const minHandle = document.getElementById(type === 'desktop' ? 'desktopMinHandle-' + route : 'mobileMinHandle-' + route);
-            const maxHandle = document.getElementById(type === 'desktop' ? 'desktopMaxHandle-' + route : 'mobileMaxHandle-' + route);
-            const priceTrack = document.getElementById(type === 'desktop' ? 'desktopPriceTrack-' + route : 'mobilePriceTrack-' + route);
-            const minDisplay = document.getElementById(type === 'desktop' ? 'desktopMinDisplay-' + route : 'mobileMinDisplay-' + route);
-            const maxDisplay = document.getElementById(type === 'desktop' ? 'desktopMaxDisplay-' + route : 'mobileMaxDisplay-' + route);
-
-            let minValue = parseInt(minInput.value) || 0;
-            let maxValue = parseInt(maxInput.value) || 1000;
-
-            // Ensure min <= max
-            if (minValue > maxValue) {
-                minValue = maxValue;
-                minInput.value = minValue;
-            }
-
-            // Ensure values are within range
-            minValue = Math.max(0, Math.min(maxPrice, minValue));
-            maxValue = Math.max(0, Math.min(maxPrice, maxValue));
-
-            // Calculate percentages
-            const minPercent = (minValue / maxPrice) * 100;
-            const maxPercent = (maxValue / maxPrice) * 100;
-
-            // Update handles
-            minHandle.style.left = minPercent + '%';
-            minHandle.setAttribute('data-value', minValue);
-            maxHandle.style.left = maxPercent + '%';
-            maxHandle.setAttribute('data-value', maxValue);
-
-            // Update track
-            priceTrack.style.left = minPercent + '%';
-            priceTrack.style.width = (maxPercent - minPercent) + '%';
-
-            // Update displays
-            minDisplay.textContent = minValue;
-            maxDisplay.textContent = maxValue;
-
-            // Auto-submit desktop form
-            if (type === 'desktop') {
-                setTimeout(() => {
-                    submitDesktopFilters(route);
-                }, 500);
-            }
-        }
-
-        // ========== ENHANCED FILTER SUBMISSION ==========
-        function submitDesktopFilters(route) {
-            const form = document.getElementById('desktopFilterForm-' + route);
-            const applyBtn = document.getElementById('desktopApplyBtn-' + route);
-
-            if (!form || !applyBtn) return;
-
-            // Show subtle loading
-            showLoading(route);
-
-            // Add quick loading effect to button
-            applyBtn.classList.add('btn-loading');
-
-            // Submit form
-            setTimeout(() => {
-                form.submit();
-            }, 300);
-        }
-
-        function applyMobileFilters(route) {
-            const form = document.getElementById('mobileFilterForm-' + route);
-            const applyBtn = document.getElementById('mobileApplyBtn-' + route);
-            const drawer = document.getElementById('filterDrawer-' + route);
-            const overlay = document.getElementById('filterOverlay-' + route);
-
-            if (!form || !applyBtn) return;
-
-            // Show subtle loading
-            showLoading(route);
-
-            // Add quick loading effect to button
-            applyBtn.classList.add('btn-loading');
-
-            // Close drawer
-            if (drawer && overlay) {
-                drawer.classList.remove('active');
-                overlay.classList.remove('active');
-            }
-
-            // Submit form
-            setTimeout(() => {
-                form.submit();
-            }, 300);
-        }
-
-        // ========== MOBILE FILTER DRAWER ==========
-        let startX = {};
-        let currentX = {};
-        let isDraggingDrawer = {};
-
-        function openFilterDrawer(route) {
-            const filterOverlay = document.getElementById('filterOverlay-' + route);
-            const filterDrawer = document.getElementById('filterDrawer-' + route);
-
-            if (!filterOverlay || !filterDrawer) return;
-
-            filterOverlay.classList.add('active');
-            filterDrawer.classList.add('active');
-
-            // Initialize mobile price slider when drawer opens
-            setTimeout(() => {
-                initializePriceSlider('mobile', route);
-            }, 100);
-        }
-
-        function closeFilterDrawer(route) {
-            const filterOverlay = document.getElementById('filterOverlay-' + route);
-            const filterDrawer = document.getElementById('filterDrawer-' + route);
-
-            if (!filterOverlay || !filterDrawer) return;
-
-            filterOverlay.classList.remove('active');
-            filterDrawer.classList.remove('active');
-        }
-
-        // ========== FILTER FUNCTIONS ==========
-        function removeFilter(filterName, route) {
-            showLoading(route);
-            const url = new URL(window.location.href);
-            url.searchParams.delete(filterName);
-            url.searchParams.set('page', '1');
-            window.location.href = url.toString();
-        }
-
-        function removePriceFilter(route) {
-            showLoading(route);
-            const url = new URL(window.location.href);
-            url.searchParams.delete('min_price');
-            url.searchParams.delete('max_price');
-            url.searchParams.set('page', '1');
-            window.location.href = url.toString();
-        }
-
-        function clearAllFilters(route) {
-            showLoading(route);
-
-            // Handle different route patterns
-            if (route === 'women' || route === 'men' || route === 'unisex') {
-                window.location.href = "/collections/" + route;
-            } else if (route === 'collections') {
-                window.location.href = "/collections";
-            } else {
-                window.location.href = "/";
-            }
-        }
-
-        // ========== SORTING ==========
-        function updateSort(sortValue, route) {
-            showLoading(route);
-            const url = new URL(window.location.href);
-            url.searchParams.set('sort', sortValue);
-            url.searchParams.set('page', '1');
-            window.location.href = url.toString();
-        }
-
-        // ========== SEARCH WITH LOADING ==========
-        let searchTimeout = {};
-
-        function setupSearchInput(route) {
-            const searchInput = document.getElementById('searchInput-' + route);
-            if (!searchInput) return;
-
-            searchInput.addEventListener('input', function () {
-                clearTimeout(searchTimeout[route]);
-
-                // Show searching state
-                this.classList.add('searching');
-
-                searchTimeout[route] = setTimeout(() => {
-                    this.classList.remove('searching');
-                    showLoading(route);
-                    this.form.submit();
-                }, 500);
-            });
-        }
-
-        // ========== INITIALIZE ==========
-        function initializeSearchFilter(route) {
-            // Initialize desktop price slider
-            initializePriceSlider('desktop', route);
-
-            // Setup search input
-            setupSearchInput(route);
-
-            // Setup mobile drawer events
-            const mobileFilterToggle = document.getElementById('mobileFilterToggle-' + route);
-            const filterOverlay = document.getElementById('filterOverlay-' + route);
-            const closeDrawer = document.getElementById('closeDrawer-' + route);
-            const filterDrawer = document.getElementById('filterDrawer-' + route);
-
-            if (mobileFilterToggle) {
-                mobileFilterToggle.addEventListener('click', function () {
-                    openFilterDrawer(route);
-                });
-            }
-
-            if (filterOverlay) {
-                filterOverlay.addEventListener('click', function () {
-                    closeFilterDrawer(route);
-                });
-            }
-
-            if (closeDrawer) {
-                closeDrawer.addEventListener('click', function () {
-                    closeFilterDrawer(route);
-                });
-            }
-
-            // Touch gestures for swipe to close
-            if (filterDrawer) {
-                filterDrawer.addEventListener('touchstart', (e) => {
-                    startX[route] = e.touches[0].clientX;
-                    currentX[route] = startX[route];
-                    isDraggingDrawer[route] = true;
-                    filterDrawer.style.transition = 'none';
-                });
-
-                filterDrawer.addEventListener('touchmove', (e) => {
-                    if (!isDraggingDrawer[route]) return;
-                    currentX[route] = e.touches[0].clientX;
-                    const diff = startX[route] - currentX[route];
-                    if (diff < 0) return;
-                    filterDrawer.style.transform = `translateX(${-diff}px)`;
-                    filterOverlay.style.opacity = 1 - (diff / 320);
-                });
-
-                filterDrawer.addEventListener('touchend', () => {
-                    if (!isDraggingDrawer[route]) return;
-                    isDraggingDrawer[route] = false;
-                    filterDrawer.style.transition = 'transform 0.3s ease';
-                    filterOverlay.style.transition = 'opacity 0.3s ease';
-
-                    const diff = startX[route] - currentX[route];
-                    const threshold = 100;
-
-                    if (diff > threshold) {
-                        closeFilterDrawer(route);
-                    } else {
-                        filterDrawer.style.transform = 'translateX(0)';
-                        filterOverlay.style.opacity = 1;
+                updatePriceFromInput(type, componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance && instance.priceSliders[type]) {
+                        instance.priceSliders[type].updateFromInput();
                     }
-                });
-            }
+                },
 
-            // Auto-hide loading indicator when page loads
-            setTimeout(() => hideLoading(route), 1000);
-        }
+                applyMobileFilters(componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance) instance.applyMobileFilters();
+                },
 
-        // Initialize for each route on the page
-        document.addEventListener('DOMContentLoaded', function () {
-            // Add ALL possible route variations
-            const routes = ['collections', 'women', 'men', 'unisex', 'collections.women', 'collections.men', 'collections.unisex'];
+                removeFilter(filterName, route, componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance) instance.showLoading();
+                    
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete(filterName);
+                    url.searchParams.set('page', '1');
+                    window.location.href = url.toString();
+                },
 
-            routes.forEach(route => {
-                if (document.getElementById('searchInput-' + route)) {
-                    console.log('Initializing search filter for route:', route);
-                    initializeSearchFilter(route);
+                removePriceFilter(route, componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance) instance.showLoading();
+                    
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('min_price');
+                    url.searchParams.delete('max_price');
+                    url.searchParams.set('page', '1');
+                    window.location.href = url.toString();
+                },
+
+                clearAllFilters(route, componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance) instance.showLoading();
+                    
+                    // Simple approach - just remove query parameters
+                    const basePath = window.location.pathname.split('?')[0];
+                    window.location.href = basePath;
+                },
+
+                updateSort(sortValue, route, componentId) {
+                    const instance = instances.get(componentId);
+                    if (instance) instance.showLoading();
+                    
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('sort', sortValue);
+                    url.searchParams.set('page', '1');
+                    window.location.href = url.toString();
                 }
-            });
+            };
+        })();
 
-            // Hide loading indicator when images are loaded
-            window.addEventListener('load', function () {
-                routes.forEach(route => {
-                    if (document.getElementById('searchInput-' + route)) {
-                        hideLoading(route);
-                    }
-                });
-            });
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            SearchFilter.initializeAll();
         });
+
+        // Make functions available globally for inline handlers
+        function updatePriceFromInput(type, componentId) {
+            SearchFilter.updatePriceFromInput(type, componentId);
+        }
+
+        function applyMobileFilters(componentId) {
+            SearchFilter.applyMobileFilters(componentId);
+        }
+
+        function removeFilter(filterName, route, componentId) {
+            SearchFilter.removeFilter(filterName, route, componentId);
+        }
+
+        function removePriceFilter(route, componentId) {
+            SearchFilter.removePriceFilter(route, componentId);
+        }
+
+        function clearAllFilters(route, componentId) {
+            SearchFilter.clearAllFilters(route, componentId);
+        }
+
+        function updateSort(sortValue, route, componentId) {
+            SearchFilter.updateSort(sortValue, route, componentId);
+        }
+
+        window.SearchFilter = SearchFilter;
     </script>
 @endpush

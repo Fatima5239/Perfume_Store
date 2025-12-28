@@ -553,7 +553,7 @@
             <a href="{{ route('collections.women') }}">Women's Section</a>
             <a href="{{ route('collections.men') }}">Men's Section</a>
             <a href="{{ route('collections.unisex') }}">Unisex Section</a>
-            
+            <a href="{{ route('collections.gifts') }}">Gifts/other items</a>
             <!-- Admin Authentication Section - Only shows when admin is logged in -->
             @auth
                 @if(Auth::user()->isAdmin())

@@ -12,7 +12,7 @@ use App\Http\Controllers\HomeController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // ========== ADMIN ROUTES ==========
-// Your existing admin routes stay EXACTLY as they are
+
 Route::middleware(['auth', AdminMiddleware::class])
     ->prefix('admin')
     ->name('admin.')
@@ -33,6 +33,17 @@ Route::middleware(['auth', AdminMiddleware::class])
 
         Route::patch('products/{product}/toggle-availability', [ProductController::class, 'toggleAvailability'])
             ->name('admin.products.toggle-availability');
+
+        // ========== ADD ITEMS ROUTES HERE ==========
+        // Admin items CRUD
+        Route::resource('items', \App\Http\Controllers\Admin\ItemController::class)->names([
+            'index' => 'items.index',
+            'create' => 'items.create',
+            'store' => 'items.store',
+            'edit' => 'items.edit',
+            'update' => 'items.update',
+            'destroy' => 'items.destroy',
+        ]);
     });
 
 // Shop Routes
@@ -44,6 +55,7 @@ Route::get('/product/{id}', [ShopController::class, 'show'])
     ->name('product.show')
     ->where('id', '[0-9]+');
 
+Route::get('/collections/gifts', [ShopController::class, 'gifts'])->name('collections.gifts');
 // Search Routes
 Route::get('/search', [ShopController::class, 'search'])->name('search');
 Route::get('/search/suggestions', [ShopController::class, 'searchSuggestions'])->name('search.suggestions');
